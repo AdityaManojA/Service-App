@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Event Admin Panel</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+    </style>
+</head>
+<body class="bg-gray-100">
+
+    <!-- Login Container - Shown by default -->
+    <div id="login-container" class="max-w-sm mx-auto my-20">
+        <div class="bg-white p-8 rounded-lg shadow-lg">
+            <h1 class="text-2xl font-bold mb-6 text-center">Admin Login</h1>
+            <form id="login-form" class="space-y-4">
+                <input type="email" id="email" placeholder="Email" required class="w-full px-3 py-2 border border-gray-300 rounded-md">
+                <input type="password" id="password" placeholder="Password" required class="w-full px-3 py-2 border border-gray-300 rounded-md">
+                <button type="submit" class="w-full bg-indigo-600 text-white font-bold py-2 px-4 rounded-md hover:bg-indigo-700">Login</button>
+            </form>
+            <p id="login-error" class="text-red-500 text-sm mt-2 text-center"></p>
+        </div>
+    </div>
+
+    <!-- Main App Container - Hidden until user logs in -->
+    <div id="app-container" class="hidden max-w-xl mx-auto my-10 p-8 bg-white rounded-lg shadow-md">
+        <div class="flex justify-between items-center mb-6">
+            <h1 class="text-2xl font-bold text-gray-800">Add New Event</h1>
+            <button id="logout-button" class="text-sm font-medium text-indigo-600 hover:text-indigo-800">Logout</button>
+        </div>
+        
+        <form id="event-form" class="space-y-4">
+            <!-- Event Title -->
+            <div>
+                <label for="title" class="block font-medium text-sm text-gray-700">Event Title</label>
+                <input type="text" id="title" required class="w-full mt-1 px-3 py-2 border border-gray-300 rounded-md shadow-sm">
+            </div>
+            <!-- Speaker Name -->
+            <div>
+                <label for="speakerName" class="block font-medium text-sm text-gray-700">Speaker Name</label>
+                <input type="text" id="speakerName" class="w-full mt-1 px-3 py-2 border border-gray-300 rounded-md shadow-sm">
+            </div>
+            <!-- Speaker Designation -->
+            <div>
+                <label for="designation" class="block font-medium text-sm text-gray-700">Speaker's Designation (Optional)</label>
+                <input type="text" id="designation" class="w-full mt-1 px-3 py-2 border border-gray-300 rounded-md shadow-sm">
+            </div>
+            <!-- Speaker Image Upload -->
+            <div>
+                <label for="speakerImage" class="block font-medium text-sm text-gray-700">Speaker Image (Optional, max 500x500px)</label>
+                <input type="file" id="speakerImage" accept="image/*" class="w-full mt-1 text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-600 hover:file:bg-indigo-100">
+                <img id="image-preview" src="" alt="Image Preview" class="hidden mt-2 rounded-md max-h-40">
+                <p id="image-error" class="text-red-500 text-sm mt-1"></p>
+            </div>
+            <!-- Venue -->
+            <div>
+                <label for="venue" class="block font-medium text-sm text-gray-700">Venue / Hall</label>
+                <input type="text" id="venue" required class="w-full mt-1 px-3 py-2 border border-gray-300 rounded-md shadow-sm">
+            </div>
+            <!-- Start & End Time -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                    <label for="startTime" class="block font-medium text-sm text-gray-700">Start Time</label>
+                    <input type="datetime-local" id="startTime" required class="w-full mt-1 px-3 py-2 border border-gray-300 rounded-md shadow-sm">
+                </div>
+                <div>
+                    <label for="endTime" class="block font-medium text-sm text-gray-700">End Time</label>
+                    <input type="datetime-local" id="endTime" required class="w-full mt-1 px-3 py-2 border border-gray-300 rounded-md shadow-sm">
+                </div>
+            </div>
+            
+            <button type="submit" id="submit-button" class="w-full bg-indigo-600 text-white font-bold py-3 px-4 rounded-md hover:bg-indigo-700 transition duration-300">
+                Save Event
+            </button>
+        </form>
+        <p id="feedback" class="mt-4 text-center font-medium"></p>
+    </div>
+
+    <!-- Firebase SDKs -->
+    <script src="/__/firebase/10.12.2/firebase-app-compat.js"></script>
+    <script src="/__/firebase/10.12.2/firebase-auth-compat.js"></script>
+    <script src="/__/firebase/10.12.2/firebase-firestore-compat.js"></script>
+    <script src="/__/firebase/10.12.2/firebase-storage-compat.js"></script>
+    <script src="/__/firebase/init.js"></script>
+
+    <script>
+        // Initialize Firebase services
+        const auth = firebase.auth();
+        const db = firebase.firestore();
+        const storage = firebase.storage();
+
+        // DOM Elements
+        const loginContainer = document.getElementById('login-container');
+        const appContainer = document.getElementById('app-container');
+        const loginForm = document.getElementById('login-form');
+        const loginError = document.getElementById('login-error');
+        const logoutButton = document.getElementById('logout-button');
+        const eventForm = document.getElementById('event-form');
+        const feedbackEl = document.getElementById('feedback');
+        const imageInput = document.getElementById('speakerImage');
+        const imagePreview = document.getElementById('image-preview');
+        const imageError = document.getElementById('image-error');
+        const submitButton = document.getElementById('submit-button');
+        let imageFile = null; // To hold the validated image file
+
+        // --- Authentication Logic ---
+        auth.onAuthStateChanged(user => {
+            if (user) {
+                // User is signed in.
+                loginContainer.classList.add('hidden');
+                appContainer.classList.remove('hidden');
+            } else {
+                // User is signed out.
+                loginContainer.classList.remove('hidden');
+                appContainer.classList.add('hidden');
+            }
+        });
+
+        loginForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const email = loginForm.email.value;
+            const password = loginForm.password.value;
+            auth.signInWithEmailAndPassword(email, password)
+                .catch(error => {
+                    loginError.textContent = error.message;
+                });
+        });
+
+        logoutButton.addEventListener('click', () => {
+            auth.signOut();
+        });
+
+        // --- Image Validation Logic ---
+        imageInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (!file) {
+                imagePreview.classList.add('hidden');
+                imageError.textContent = '';
+                imageFile = null;
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                const img = new Image();
+                img.onload = function() {
+                    if (img.width > 500 || img.height > 500) {
+                        imageError.textContent = `Image is too large (${img.width}x${img.height}). Max is 500x500px.`;
+                        imagePreview.classList.add('hidden');
+                        imageInput.value = ''; // Clear the input
+                        imageFile = null;
+                    } else {
+                        imageError.textContent = '';
+                        imagePreview.src = event.target.result;
+                        imagePreview.classList.remove('hidden');
+                        imageFile = file; // Store the validated file
+                    }
+                };
+                img.src = event.target.result;
+            };
+            reader.readAsDataURL(file);
+        });
+
+        // --- Form Submission Logic ---
+        eventForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            submitButton.disabled = true;
+            submitButton.textContent = 'Saving...';
+            feedbackEl.textContent = '';
+
+            let speakerImageURL = '';
+
+            try {
+                // 1. Upload image if one was selected and validated
+                if (imageFile) {
+                    const filePath = `speaker_images/${Date.now()}_${imageFile.name}`;
+                    const storageRef = storage.ref(filePath);
+                    const uploadTask = await storageRef.put(imageFile);
+                    speakerImageURL = await uploadTask.ref.getDownloadURL();
+                }
+
+                // 2. Prepare event data for Firestore
+                const eventData = {
+                    title: eventForm.title.value,
+                    speakerName: eventForm.speakerName.value,
+                    designation: eventForm.designation.value,
+                    venue: eventForm.venue.value,
+                    startTime: firebase.firestore.Timestamp.fromDate(new Date(eventForm.startTime.value)),
+                    endTime: firebase.firestore.Timestamp.fromDate(new Date(eventForm.endTime.value)),
+                    speakerImageURL: speakerImageURL // Will be empty string if no image
+                };
+
+                // 3. Save data to Firestore
+                await db.collection('schedule').add(eventData);
+                
+                feedbackEl.textContent = '✅ Event saved successfully!';
+                feedbackEl.style.color = 'green';
+                eventForm.reset();
+                imagePreview.classList.add('hidden');
+                imageFile = null;
+
+            } catch (error) {
+                console.error("Error saving event: ", error);
+                feedbackEl.textContent = `❌ Error: ${error.message}`;
+                feedbackEl.style.color = 'red';
+            } finally {
+                submitButton.disabled = false;
+                submitButton.textContent = 'Save Event';
+                setTimeout(() => { feedbackEl.textContent = ''; }, 5000);
+            }
+        });
+    </script>
+</body>
+</html>
