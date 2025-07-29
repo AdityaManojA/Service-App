@@ -1,4 +1,4 @@
-import { Stack } from 'expo-router';
+//import { Stack } from 'expo-router';
 import { useFonts } from 'expo-font';
 import { useEffect } from 'react';
 import 'react-native-reanimated';
