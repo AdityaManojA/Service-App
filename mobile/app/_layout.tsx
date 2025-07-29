@@ -3,13 +3,6 @@ import { useFonts } from 'expo-font';
 import { useEffect } from 'react';
 import 'react-native-reanimated';
 
-/**
- * This is the root layout for the entire application. It sits at the top level
- * of the 'app' directory and is responsible for:
- * 1. Loading global assets like fonts.
- * 2. Defining the top-level navigation structure, which includes BOTH the (auth)
- * and (tabs) screen groups.
- */
 export default function RootLayout() {
   // Load custom fonts for the application.
   const [fontsLoaded, fontError] = useFonts({
