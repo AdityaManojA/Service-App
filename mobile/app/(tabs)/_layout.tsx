@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Redirect, Tabs } from 'expo-router';
 import { onAuthStateChanged } from 'firebase/auth';
-import { auth } from '@/config/firebase'; // Corrected import path
-import { Ionicons } from '@expo/vector-icons'; // Ensure you have installed @expo/vector-icons
+import { auth } from '@/config/firebase'; 
+import { Ionicons } from '@expo/vector-icons'; 
 
 
 export default function TabsLayout() {
@@ -18,7 +18,7 @@ export default function TabsLayout() {
       setIsLoaded(true);
     });
 
-    // Cleanup function to detach the listener when the component is unmounted.
+   
     return () => unsubscribe();
   }, []);
   if (!isLoaded) {
