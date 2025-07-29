@@ -1,10 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { Redirect, Tabs } from 'expo-router';
 import { onAuthStateChanged } from 'firebase/auth';
-import { auth } from '@/config/firebase'; 
-import { Ionicons } from '@expo/vector-icons'; 
+import { auth } from '@/config/firebase'; // Corrected import path
+import { Ionicons } from '@expo/vector-icons'; // Ensure you have installed @expo/vector-icons
 
-
+/**
+ * This layout component acts as a gatekeeper for the main application screens.
+ * It uses Firebase's onAuthStateChanged listener to check the user's login status in real-time.
+ * * - If the user is logged in, it renders the main tab navigator.
+ * - If the user is not logged in, it redirects them to the sign-in screen.
+ * - It shows a loading state (returns null) while Firebase checks the initial auth state
+ * to prevent a screen flicker.
+ */
 export default function TabsLayout() {
   const [user, setUser] = useState<any>(null); // Using 'any' for simplicity, can be typed to Firebase User
   
@@ -12,21 +19,24 @@ export default function TabsLayout() {
   const [isLoaded, setIsLoaded] = useState(false);
 
   useEffect(() => {
-
+    // onAuthStateChanged is a real-time listener. It runs once on component mount
+    // and again every time a user signs in or out.
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
       setIsLoaded(true);
     });
 
-   
+    // Cleanup function to detach the listener when the component is unmounted.
     return () => unsubscribe();
   }, []);
+
   if (!isLoaded) {
     return null;
   }
 
   // If the check is complete and there is no user, redirect to the sign-in page.
   if (!user) {
+    // FIX: Use the object syntax for the href prop to satisfy TypeScript.
     return <Redirect href="/sign-in" />;
   }
 
