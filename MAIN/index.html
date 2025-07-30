@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IAN-2025 Conference</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .tab-active { border-bottom-color: #4f46e5; color: #4f46e5; font-weight: 600; }
+    </style>
+</head>
+<body class="bg-gray-100 text-gray-800">
+
+    <div id="app" class="max-w-4xl mx-auto bg-white min-h-screen shadow-lg">
+        <header class="bg-indigo-600 text-white p-6 text-center">
+            <h1 class="text-3xl font-bold">IAN-2025</h1>
+            <p class="text-indigo-200 mt-1">XLIII Annual Meeting of Indian Academy of Neurosciences</p>
+        </header>
+
+        <main class="p-4 sm:p-6 lg:p-8">
+            <div class="border-b border-gray-200 mb-6">
+                <nav class="-mb-px flex space-x-4 sm:space-x-8" aria-label="Tabs">
+                    <button id="tab-home" class="whitespace-nowrap pb-4 px-1 border-b-2 font-medium text-sm tab-active">Happening Now</button>
+                    <button id="tab-schedule" class="whitespace-nowrap pb-4 px-1 border-b-2 font-medium text-sm border-transparent text-gray-500 hover:text-gray-700">Full Schedule</button>
+                </nav>
+            </div>
+            <div id="content-home" class="tab-content"></div>
+            <div id="content-schedule" class="tab-content hidden"></div>
+        </main>
+    </div>
+
+    <!-- Firebase SDKs -->
+    <script src="/__/firebase/10.12.2/firebase-app-compat.js"></script>
+    <script src="/__/firebase/10.12.2/firebase-firestore-compat.js"></script>
+    <script src="/__/firebase/init.js"></script>
+
+    <script>
+        const db = firebase.firestore();
+
+        const homeContent = document.getElementById('content-home');
+        const scheduleContent = document.getElementById('content-schedule');
+        
+        function setupTabs() {
+            const tabs = document.querySelectorAll('nav button');
+            const contents = document.querySelectorAll('.tab-content');
+            tabs.forEach(tab => {
+                tab.addEventListener('click', () => {
+                    tabs.forEach(t => t.classList.remove('tab-active'));
+                    tab.classList.add('tab-active');
+                    contents.forEach(c => c.classList.add('hidden'));
+                    const contentId = `content-${tab.id.split('-')[1]}`;
+                    document.getElementById(contentId).classList.remove('hidden');
+                });
+            });
+        }
+
+        // Updated to show events happening now or starting within the next hour
+        function renderHomeScreen(events) {
+            const now = new Date();
+            const oneHourFromNow = new Date(now.getTime() + 60 * 60 * 1000);
+
+            // Filter for events that are happening now or starting soon
+            const upcomingEvents = events.filter(event => {
+                const startTime = event.startTime.toDate();
+                const endTime = event.endTime.toDate();
+
+                const isHappeningNow = now >= startTime && now <= endTime;
+                const isStartingSoon = startTime > now && startTime <= oneHourFromNow;
+
+                return isHappeningNow || isStartingSoon;
+            });
+
+            let html = '';
+            if (upcomingEvents.length > 0) {
+                // Loop through all upcoming events and create a card for each
+                upcomingEvents.forEach(event => {
+                    const imageHtml = event.speakerImageURL 
+                        ? `<img src="${event.speakerImageURL}" alt="Photo of ${event.speakerName}" class="w-32 h-32 rounded-full object-cover mx-auto mb-4 border-4 border-indigo-200 shadow-lg">`
+                        : '';
+
+                    html += `
+                        <div class="bg-white border border-gray-200 rounded-lg p-6 shadow-sm text-center mb-6">
+                            ${imageHtml}
+                            <h2 class="text-2xl font-bold text-indigo-600 mb-2">${event.title}</h2>
+                            ${event.speakerName ? `<p class="text-xl font-semibold">${event.speakerName}</p>` : ''}
+                            ${event.designation ? `<p class="text-md text-gray-500 mb-4">${event.designation}</p>` : ''}
+                            <div class="flex items-center justify-center text-gray-600 mt-4">
+                                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                                <span>${event.venue}</span>
+                            </div>
+                            <div class="flex items-center justify-center text-gray-600 mt-2">
+                                 <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                                <span>${event.startTime.toDate().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})} - ${event.endTime.toDate().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span>
+                            </div>
+                        </div>`;
+                });
+            } else {
+                html = `
+                    <div class="bg-white border border-gray-200 rounded-lg p-6 text-center">
+                        <p class="text-lg font-semibold">No event is currently in session or starting soon.</p>
+                        <p class="text-gray-500 mt-1">Please check the full schedule.</p>
+                    </div>`;
+            }
+            homeContent.innerHTML = html;
+        }
+
+        // Updated to display speaker image in the schedule
+        function renderScheduleScreen(events) {
+            const groupedEvents = events.reduce((acc, event) => {
+                const eventDate = event.startTime.toDate().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+                if (!acc[eventDate]) {
+                    acc[eventDate] = [];
+                }
+                acc[eventDate].push(event);
+                return acc;
+            }, {});
+
+            let html = '<div class="space-y-8">';
+            if (events.length === 0) {
+                 html += `<p class="text-center text-gray-500">No events scheduled yet.</p>`;
+            } else {
+                for (const date in groupedEvents) {
+                    html += `<div><h3 class="text-xl font-bold border-b-2 border-indigo-500 pb-2 mb-4">${date}</h3><ul class="space-y-4">`;
+                    groupedEvents[date].forEach(event => {
+                        // Conditionally add the image tag
+                        const imageHtml = event.speakerImageURL
+                            ? `<img src="${event.speakerImageURL}" alt="Photo of ${event.speakerName}" class="w-16 h-16 rounded-full object-cover mr-4">`
+                            : `<div class="w-16 h-16 rounded-full bg-gray-200 mr-4 flex items-center justify-center text-gray-400">
+                                 <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
+                               </div>`;
+
+                        html += `
+                            <li class="bg-gray-50 p-4 rounded-lg border flex items-center">
+                                ${imageHtml}
+                                <div class="flex-grow">
+                                    <p class="font-bold text-lg text-indigo-700">${event.title}</p>
+                                    ${event.speakerName ? `<p class="font-semibold">${event.speakerName}</p>` : ''}
+                                    <div class="text-sm text-gray-500 mt-2">
+                                        <span class="inline-flex items-center">📍<span class="ml-1">${event.venue}</span></span>
+                                        <span class="inline-flex items-center ml-4">🕒<span class="ml-1">${event.startTime.toDate().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})} - ${event.endTime.toDate().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</span></span>
+                                    </div>
+                                </div>
+                            </li>`;
+                    });
+                    html += '</ul></div>';
+                }
+            }
+            html += '</div>';
+            scheduleContent.innerHTML = html;
+        }
+
+        function initializeApp() {
+            setupTabs();
+            // Listen for real-time updates on the schedule
+            const scheduleQuery = db.collection('schedule').orderBy('startTime');
+            
+            scheduleQuery.onSnapshot((snapshot) => {
+                const events = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                renderHomeScreen(events);
+                renderScheduleScreen(events);
+            }, (error) => {
+                console.error("Error fetching schedule: ", error);
+            });
+        }
+
+        initializeApp();
+    </script>
+</body>
+</html>
