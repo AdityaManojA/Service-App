@@ -15,7 +15,7 @@
 
     <div id="app" class="max-w-4xl mx-auto bg-white min-h-screen shadow-lg">
         <header class="bg-indigo-600 text-white p-6 text-center">
-            <h1 class="text-3xl font-bold">IAN-2025</h1>
+            <h1 class="text-3xl font-bold">GLIA</h1>
             <p class="text-indigo-200 mt-1">XLIII Annual Meeting of Indian Academy of Neurosciences</p>
         </header>
 
@@ -124,7 +124,7 @@
                 for (const date in groupedEvents) {
                     html += `<div><h3 class="text-xl font-bold border-b-2 border-indigo-500 pb-2 mb-4">${date}</h3><ul class="space-y-4">`;
                     groupedEvents[date].forEach(event => {
-                        // Conditionally add the image tag
+                        
                         const imageHtml = event.speakerImageURL
                             ? `<img src="${event.speakerImageURL}" alt="Photo of ${event.speakerName}" class="w-16 h-16 rounded-full object-cover mr-4">`
                             : `<div class="w-16 h-16 rounded-full bg-gray-200 mr-4 flex items-center justify-center text-gray-400">
